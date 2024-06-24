@@ -1,4 +1,4 @@
-# Mops data-validation-framework library
+# data-validation-framework library
 ## Summary
 The project is library of a Python module. The '**data-validation-framework**' library is designed to facilitate count data and row data and metric data validation for Hive tables specified in a YAML configuration file as input parameters to the library function **get_multiple_table_data_validation_details()**. It offers functionalities to compare and validate data between two tables based on input parameters provided by users such as table1, table2, filter, etc.
 
