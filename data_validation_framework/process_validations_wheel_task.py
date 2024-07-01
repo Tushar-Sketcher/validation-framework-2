@@ -3,26 +3,26 @@ from databricks.sdk.runtime import dbutils
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
-from data_validation_framework.process_validations_task import get_data_validation_details, get_multiple_table_data_validation_details
+from data_validation_framework.process_validations_task import generate_table_comparison_details, generate_multiple_table_comparison_details
 
 
-def get_multiple_table_data_validation_details_wheel_task():
+def generate_multiple_table_comparison_details_wheel_task():
     """
-    This is python wheel task entry point using the logic from notebook task function get_multiple_table_data_validation_details().
+    This is python wheel task entry point using the logic from notebook task function generate_multiple_table_comparison_details().
     """
     parser = argparse.ArgumentParser(description='process validation')
     parser.add_argument('--path', type=str, help='file path of yaml containing validation input parameters ', required=True)
     args = parser.parse_args()
     
     path = str(args.path)
-    validation_df = get_multiple_table_data_validation_details(path)
+    validation_df = generate_multiple_table_comparison_details(path)
     validation_df.show(truncate=0)
     return validation_df
 
 
-def get_data_validation_details_wheel_task():
+def generate_table_comparison_details_wheel_task():
     """
-        This is python wheel task entry point using the logic from notebook task function get_data_validation_details() 
+        This is python wheel task entry point using the logic from notebook task function generate_table_comparison_details() 
         to fetch validation data for the single set of tables. 
     """
     parser = argparse.ArgumentParser(description='process validation')
@@ -48,6 +48,6 @@ def get_data_validation_details_wheel_task():
     is_validation_active = args.is_validation_active
     materialization = args.materialization
 
-    validation_df = get_data_validation_details(table1, table2, filter_condition, metric_validation_active, dimenssion_columns, dim_metrics_columns, ignored_columns, is_validation_active, materialization)
+    validation_df = generate_table_comparison_details(table1, table2, filter_condition, metric_validation_active, dimenssion_columns, dim_metrics_columns, ignored_columns, is_validation_active, materialization)
     validation_df.show(truncate=0)
     return validation_df

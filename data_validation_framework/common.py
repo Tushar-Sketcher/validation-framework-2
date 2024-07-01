@@ -27,9 +27,9 @@ def get_query(table, filter):
     - query1 (str): The generated SQL query for table.
     """
     if filter == '' or filter == 'null' or filter is None:
-        query = f"SELECT /*+ REPARTITION(400) */ * FROM {table}"
+        query = f"SELECT /*+ REPARTITION(200) */ * FROM {table}"
     elif filter and isinstance(filter, str):
-        query = f"SELECT /*+ REPARTITION(400) */ * FROM {table} WHERE {filter}"
+        query = f"SELECT /*+ REPARTITION(200) */ * FROM {table} WHERE {filter}"
     return query
 
 
@@ -87,8 +87,6 @@ def get_dataframe(spark, rows):
                 StructField("count_match_status", BooleanType(), True),
                 StructField("table1_subtract_count", IntegerType(), True),
                 StructField("table2_subtract_count", IntegerType(), True),
-                StructField("table1_datamatch_status", BooleanType(), True),
-                StructField("table2_datamatch_status", BooleanType(), True),
                 StructField("partition_status_table1", StringType(), True),
                 StructField("partition_status_table2", StringType(), True),
                 StructField("table1_partition_columns", ArrayType(StringType()), True),

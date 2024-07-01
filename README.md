@@ -1,6 +1,6 @@
-# data-validation-framework library
+# Mops data-validation-framework library
 ## Summary
-The project is library of a Python module. The '**data-validation-framework**' library is designed to facilitate count data and row data and metric data validation for Hive tables specified in a YAML configuration file as input parameters to the library function **get_multiple_table_data_validation_details()**. It offers functionalities to compare and validate data between two tables based on input parameters provided by users such as table1, table2, filter, etc.
+The project is library of a Python module. The '**data-validation-framework**' library is designed to facilitate count data and row data and metric data validation for Hive tables specified in a YAML configuration file as input parameters to the library function **generate_multiple_table_comparison_details()**. It offers functionalities to compare and validate data between two tables based on input parameters provided by users such as table1, table2, filter, etc.
 
 - If you are a developer who would like to use this library for testing or in your databricks workflow read [How To use the data-validation-framework library:](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/README.md#how-to-use-the-data-validation-framework-library) 
 
@@ -16,16 +16,16 @@ pip install data-validation-framework --index-url https://artifactory.zgtools.ne
 
 [[_TOC_]]
 
-The data-validation-framework consist a function called **get_multiple_table_data_validation_details()** which task yaml file path string as input parameter. In a YAML configuration user need to specify the input parameters for their tables in order to process validate multiple tables added in the yaml. Please Refer this section for [input parmaeter details](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/README.md#input-parameters-details-in-yaml-file).
+The data-validation-framework consist a function called **generate_multiple_table_comparison_details()** which task yaml file path string as input parameter. In a YAML configuration user need to specify the input parameters for their tables in order to process validate multiple tables added in the yaml. Please Refer this section for [input parmaeter details](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/README.md#input-parameters-details-in-yaml-file).
 
 The source code for the library functions is maintained in the data-validation-framework repo. This library can be used in databricks notebooks and workflows.
 
 ## Library Functions:
-### get_multiple_table_data_validation_details:
-  **get_multiple_table_data_validation_details(*path: string = ‘YAML File Path String’*)**
+### generate_multiple_table_comparison_details:
+  **generate_multiple_table_comparison_details(*path: string = ‘YAML File Path String’*)**
 
 ### Purpose: 
-**get_multiple_table_data_validation_details()** is a util function to process a Count Comparison, Row(data) Comparison and Metric validation based on the input YAML configuration provided by the user. This function accepts a YAML file path as a string input from the user. It then processes validations for input tables based on the parameters provided by the user within the YAML file.
+**generate_multiple_table_comparison_details()** is a util function to process a Count Comparison, Row(data) Comparison and Metric validation based on the input YAML configuration provided by the user. This function accepts a YAML file path as a string input from the user. It then processes validations for input tables based on the parameters provided by the user within the YAML file.
 
 This function can be used in 2 types of tasks:
   1. Notebook Task: This function can be integrated into a workflow as a notebook task or executed manually using notebook. It facilitates table testing by providing functionalities for comprehensive data validation.
@@ -39,14 +39,14 @@ Within the above function we are processing primarily 4 functions in order to do
 
 - For Row data validation we are processing: *compare_columns()* and *compare_rows()*. The *compare_columns()* checks if the columns of two tables are the same, if those are same then execute *compare_rows()* to perform row-level(row data) validation between two tables using our MD5 hashing approach. This function return the data difference count details between 2 tables.
 
-- Metric validation we are processing *compare_metrics()* function which returns a seperate dataframe containg the metric validation details and output is stored as table to the 'sandbox_marketing.mart_mops_tests'.
+- Metric validation we are processing *compare_metrics_by_dimension()* function which returns a seperate dataframe containg the metric validation details and output is stored as table to the 'sandbox_marketing.mart_mops_tests'.
 
 - **Note**: The metric validation function is processed only when **metric_validation_active** is set to **True** and code identifies that table1 and table2 data is not matching for the tables for that row input. If data match found in *compare_rows()* for those tables then there is no need to process *compare_metric_sum()* function. 
 
 ## Input Parameters Details in YAML File:
 Below are the parameters that user needs to provide in the yaml. Alternatively, users can create their own YAML file adhering strictly to below input parameters names and pass that YAML file path string to the function like below  
 ```bash
-  get_multiple_table_data_validation_details(path=’/Workspace/path/to/your/yamlfile/yaml.yml’)
+  generate_multiple_table_comparison_details(path=’/Workspace/path/to/your/yamlfile/yaml.yml’)
 ```
 
 The below parameters should be specified under ‘**rows**’ section(do not change param’s names) in the yaml. (Examples file: [tables.yml](https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#files/1760665646812858) )
@@ -101,8 +101,8 @@ rows:
     dim_metrics_columns: 'team_lead, mls_id'
 ```
 
-## Steps to use **get_multiple_table_data_validation_details()**:
-Below are the steps to use the library in the databricks notebooks. Please check this example data validation framework testing notebook for the usage of **get_multiple_table_data_validation_details()** https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#notebook/3501886217257531/command/2038113280157046
+## Steps to use **generate_multiple_table_comparison_details()**:
+Below are the steps to use the library in the databricks notebooks. Please check this example data validation framework testing notebook for the usage of **generate_multiple_table_comparison_details()** https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#notebook/3501886217257531/command/2038113280157046
 
 Perform below command for to instal package in the databricks notebookl: 
 ### 1. Install Package:
@@ -115,7 +115,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
 
-from data_validation_framework.process_validation_task import get_multiple_table_data_validation_details
+from data_validation_framework.process_validation_task import generate_multiple_table_comparison_details
 ```
 ### 3. Input YAML path:
 Create a yaml file (like tables.yml https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#files/176066564681285) somewhere in databricks workspace or in the git repo (If you wish to create this as a task in workflows) with the above mentioned required input parameters for the tables you are comparing and define path variable in notebook providing the yaml file path.
@@ -123,8 +123,8 @@ Create a yaml file (like tables.yml https://zg-marketing-lab.cloud.databricks.co
 path = '/Workspace/Users/v-tushara@zillowgroup.com/tables.yml'
 ```
 
-### 4. Execute get_multiple_table_data_validation_details(path):
-Pass the ‘path’ variable to the functions get_multiple_table_data_validation_details() and execute. Once executed it will process validation and create a dataframe containing details such as table1 count, table2 count, count difference between table1 and table2, difference percentage, count match status, table1_subtract_cnt(count of data rows in table1 but not present in table2. The .subtract action in pyspark), table2_subtract_cnt (count of data rows in table2 but not present in table1. The .subtract() action in pyspark), table1_datamatch_st (Whether table1 data matched with table2 True or False), table2_datamatch_st (Whether table2 data matched with table2, True or False ) and partition column details. 
+### 4. Execute generate_multiple_table_comparison_details(path):
+Pass the ‘path’ variable to the functions generate_multiple_table_comparison_details() and execute. Once executed it will process validation and create a dataframe containing details such as table1 count, table2 count, count difference between table1 and table2, difference percentage, count match status, table1_subtract_cnt(count of data rows in table1 but not present in table2. The .subtract action in pyspark), table2_subtract_cnt (count of data rows in table2 but not present in table1. The .subtract() action in pyspark), table1_datamatch_st (Whether table1 data matched with table2 True or False), table2_datamatch_st (Whether table2 data matched with table2, True or False ) and partition column details. 
 
 You can view the dataframe by df.show() or display(df).
 
@@ -135,16 +135,16 @@ Prerequisite:
 from pyspark.sql import SparkSession
 from pyspark.sql.types import *
 from pyspark.sql.functions import *
-from data_validation_framework.process_validation_task import  get_multiple_table_data_validation_details
+from data_validation_framework.process_validation_task import  generate_multiple_table_comparison_details
 
 path = '/Workspace/Users/v-tushara@zillowgroup.com/tables.yml'
 
-df = get_multiple_table_data_validation_details(path)
+df = generate_multiple_table_comparison_details(path)
 display(df)
 ```
 
 ### Example Validation Notebook():
-Refer to this example notebook showcasing how to use the get_multiple_table_data_validation_details() function, leveraging the input tables specified in the [tables.yml](https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#files/1760665646812858)
+Refer to this example notebook showcasing how to use the generate_multiple_table_comparison_details() function, leveraging the input tables specified in the [tables.yml](https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#files/1760665646812858)
 
 notebook: https://zg-marketing-lab.cloud.databricks.com/?o=3559368047888194#notebook/3501886217257531/command/2038113280157046
 
@@ -159,7 +159,7 @@ Prerequisites:
   - Provide this *Index URL: https://artifactory.zgtools.net/artifactory/api/pypi/zg-pypi/simple* when installing the and make sure the library is installed successfully in the cluster.
 
 ### Notebook Task(recommended):
-  1. Create a notebook, add the code for library execution as mentioned in the step [Execute get_multiple_table_data_validation_details(path)](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/README.md#4-execute-get_multiple_table_data_validation_detailspath) and replace the path variable value with your yaml file path created as per the [configurations](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/USAGE.md#input-parameters-details-in-yaml-file) for your tables.
+  1. Create a notebook, add the code for library execution as mentioned in the step [Execute generate_multiple_table_comparison_details(path)](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/README.md#4-execute-generate_multiple_table_comparison_detailspath) and replace the path variable value with your yaml file path created as per the [configurations](https://gitlab.zgtools.net/analytics/data-engineering/big-data/marketing-de-databricks/data-validation-framework/-/blob/feature/validation_framework/USAGE.md#input-parameters-details-in-yaml-file) for your tables.
   2. Add **data-validation-framework** library dependency providing the *index url* in the task’s configuration in your databricks workflow and execute the task.
 
 

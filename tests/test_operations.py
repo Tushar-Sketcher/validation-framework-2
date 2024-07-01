@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit, md5
-from data_validation_framework.operations import ValidationError, compare_counts, compare_columns, compare_rows, compare_metrics
+from data_validation_framework.operations import ValidationError, compare_counts, compare_columns, compare_rows, compare_metrics_by_dimension
 
 class TestFunctions(unittest.TestCase):
 
@@ -136,7 +136,7 @@ class TestFunctions(unittest.TestCase):
         result_no_match = compare_rows(df1_mock_no_match, df2_mock_no_match)
         self.assertEqual(result_no_match, (1, 2, False, False))
 
-    ## Test cases for compare_metrics()
+    ## Test cases for compare_metrics_by_dimension()
     def setUp(self):
         # Mock SparkSession setup
         self.spark_mock = Mock()
@@ -149,32 +149,32 @@ class TestFunctions(unittest.TestCase):
         self.spark_mock.sql.return_value.isEmpty.return_value = True
         self.spark_mock.sql.return_value.write.return_value = self.spark_mock.sql.return_value
 
-    def test_compare_metrics_success(self):
-        # Mock successful compare_metrics scenario
+    def test_compare_metrics_by_dimension_success(self):
+        # Mock successful compare_metrics_by_dimension scenario
         with patch('builtins.print') as mock_print:
-            result = compare_metrics(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
+            result = compare_metrics_by_dimension(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
         
         self.assertIsInstance(result, str)
         self.assertIn("Successfully stored", result)
         mock_print.assert_called_once_with("Metrics comparison successful for table1 and table2.")
 
-    def test_compare_metrics_empty_result(self):
-        # Mock compare_metrics with empty result scenario
+    def test_compare_metrics_by_dimension_empty_result(self):
+        # Mock compare_metrics_by_dimension with empty result scenario
         self.spark_mock.sql.return_value.isEmpty.return_value = True
         
         with patch('builtins.print') as mock_print:
-            result = compare_metrics(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
+            result = compare_metrics_by_dimension(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
         
         self.assertIsInstance(result, str)
         self.assertIn("No data to compare", result)
         mock_print.assert_called_once_with("No data found to compare metrics for table1 and table2.")
 
-    def test_compare_metrics_exception(self):
-        # Mock compare_metrics with exception scenario
+    def test_compare_metrics_by_dimension_exception(self):
+        # Mock compare_metrics_by_dimension with exception scenario
         self.spark_mock.sql.return_value.isEmpty.side_effect = Exception("Test exception")
 
         with patch('builtins.print') as mock_print:
-            result = compare_metrics(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
+            result = compare_metrics_by_dimension(self.spark_mock, "table1", "table2", "filter", "dim_cols", "dim_metrics_cols", "ignored_cols")
         
         self.assertIsInstance(result, str)
         self.assertIn("Error occurred", result)
@@ -188,9 +188,9 @@ class TestFunctions(unittest.TestCase):
         spark_mock.sql.return_value.columns = ['col1']
         spark_mock.sql.return_value.count.return_value = 1
 
-        # Test compare_metrics function with ValidationError
+        # Test compare_metrics_by_dimension function with ValidationError
         with self.assertRaises(ValidationError):
-            compare_metrics(spark_mock, "table1", "table2", "filter")
+            compare_metrics_by_dimension(spark_mock, "table1", "table2", "filter")
 
 if __name__ == "__main__":
     unittest.main()

@@ -21,8 +21,8 @@ requests = {version = "<2.30", source = "public-pypi"}
 # ipython = "*"
 
 [tool.poetry.scripts]
-get_data_validation_details_wheel_task = "data_validation_framework.process_validations_wheel_task:get_data_validation_details_wheel_task"
-get_multiple_table_data_validation_details_wheel_task = "data_validation_framework.process_validations_wheel_task:get_multiple_table_data_validation_details_wheel_task"
+generate_table_comparison_details_wheel_task = "data_validation_framework.process_validations_wheel_task:generate_table_comparison_details_wheel_task"
+generate_multiple_table_comparison_details_wheel_task = "data_validation_framework.process_validations_wheel_task:generate_multiple_table_comparison_details_wheel_task"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.2.1"

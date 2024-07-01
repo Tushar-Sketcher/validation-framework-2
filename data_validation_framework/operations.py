@@ -50,9 +50,9 @@ def compare_columns(table1_df, table2_df):
     table1_sort_cols = sorted(table1_df.columns)
     table2_sort_cols = sorted(table2_df.columns)
 
-    col_match_status = True if table1_sort_cols == table2_sort_cols else False
+    is_column_name_match = True if table1_sort_cols == table2_sort_cols else False
 
-    return col_match_status, table1_sort_cols, table2_sort_cols
+    return is_column_name_match, table1_sort_cols, table2_sort_cols
 
 
 def compare_rows(table1_df, table2_df):
@@ -77,16 +77,13 @@ def compare_rows(table1_df, table2_df):
     table1_subtract_count = table1_md5.subtract(table2_md5).count()
     table2_subtract_count = table2_md5.subtract(table1_md5).count()
 
-    table1_datamatch_status = table1_md5.subtract(table2_md5).isEmpty()
-    table2_datamatch_status = table2_md5.subtract(table1_md5).isEmpty()
-
     table1_md5.unpersist()
     table2_md5.unpersist()
 
-    return table1_subtract_count, table2_subtract_count, table1_datamatch_status, table2_datamatch_status
+    return table1_subtract_count, table2_subtract_count
 
 
-def compare_metrics(table1, table2, filter="", dimenssion_cols="", dim_metrics_cols="", ignored_cols="", spark=""):
+def compare_metrics_by_dimension(table1, table2, filter="", dimenssion_cols="", dim_metrics_cols="", ignored_cols="", metric_result_table="", spark=""):
     """
     Perform metric data validations between two tables.
     Params: 
@@ -186,13 +183,10 @@ def compare_metrics(table1, table2, filter="", dimenssion_cols="", dim_metrics_c
             print(f'List Of Dimenssion Columns Added From the tables: {dimenssion_cols}\n')
             print(f'Check dataframe for the query results:::')
             metric_df = spark.sql(sql)
-            metric_table = "{catalog}.{schema}.{table_name}_metric_validation".format(catalog='sandbox_marketing',
-                                                                                      schema='mart_mops_test',
-                                                                                      table_name=table2.split('.')[2])
-            spark.sql(f"DROP TABLE IF EXISTS {metric_table}")
+            spark.sql(f"DROP TABLE IF EXISTS {metric_result_table}")
             try:
-                metric_df.write.format("delta").mode("overwrite").saveAsTable(metric_table)
-                print(f"Successfully stored the metric validation data in table: {metric_table}. Please query this table to check validation details.")
+                metric_df.write.format("delta").mode("overwrite").saveAsTable(metric_result_table)
+                print(f"Successfully stored the metric validation data in table: {metric_result_table}. Please query this table to check validation details.")
                 return metric_df
             except Exception as e:
                 return f"Error encountered while writing metric validation data. Error Details: {str(e)}"
@@ -202,7 +196,7 @@ def compare_metrics(table1, table2, filter="", dimenssion_cols="", dim_metrics_c
             return
 
 
-def validation_process(spark, result_rows, table1, table2, filter, metric_validation_active, dimenssion_cols, dim_metrics_cols, ignored_cols, is_validation_active, materialization):
+def compare_two_tables(spark, table1, table2, filter, metric_validation_active, dimenssion_cols, dim_metrics_cols, ignored_cols, metric_result_table, materialization, result_rows=None):
     """
     Process the count, row and metric(optional) data validation based on below parameters input.
     Params:
@@ -220,52 +214,49 @@ def validation_process(spark, result_rows, table1, table2, filter, metric_valida
      Returns:
     - result_rows (list): The list of rows containing validation details.
     """
+    if result_rows is None:
+        result_rows = []
     try:
-        if is_validation_active:
-            table1_query = get_query(table1, filter)
-            table2_query = get_query(table2, filter)
+        table1_query = get_query(table1, filter)
+        table2_query = get_query(table2, filter)
 
-            partition_status_table1, partition_columns_table1 = get_partition_details(spark, table1)
-            partition_status_table2, partition_columns_table2 = get_partition_details(spark, table2) 
+        partition_status_table1, partition_columns_table1 = get_partition_details(spark, table1)
+        partition_status_table2, partition_columns_table2 = get_partition_details(spark, table2) 
 
-            table_df1 = spark.sql(table1_query)
-            table_df2 = spark.sql(table2_query)
+        table_df1 = spark.sql(table1_query)
+        table_df2 = spark.sql(table2_query)
 
-            table_df1.persist(StorageLevel.MEMORY_AND_DISK)
-            table_df2.persist(StorageLevel.MEMORY_AND_DISK)
+        table_df1.persist(StorageLevel.MEMORY_AND_DISK)
+        table_df2.persist(StorageLevel.MEMORY_AND_DISK)
 
-            table1_count, table2_count, diff, diff_per, count_match_status = compare_counts(table_df1, table_df2)
-            column_match_status, table1_sort_columns, table2_sort_columns = compare_columns(table_df1, table_df2)
+        table1_count, table2_count, diff, diff_per, count_match_status = compare_counts(table_df1, table_df2)
+        is_column_name_match, table1_sort_columns, table2_sort_columns = compare_columns(table_df1, table_df2)
 
-            if column_match_status:
-                table_df1 = table_df1.select(*table1_sort_columns)
-                table_df2 = table_df2.select(*table2_sort_columns)
+        if is_column_name_match:
+            table_df1 = table_df1.select(*table1_sort_columns)
+            table_df2 = table_df2.select(*table2_sort_columns)
 
-                table1_subtract_count, table2_subtract_count, table1_datamatch_status, table2_datamatch_status = compare_rows(table_df1, table_df2)
-                result_rows.append((table1, table2, filter, table1_count, table2_count, diff, diff_per, count_match_status, table1_subtract_count, 
-                            table2_subtract_count, table1_datamatch_status, table2_datamatch_status, partition_status_table1, 
-                            partition_status_table2, partition_columns_table1, partition_columns_table2, materialization))
+            table1_subtract_count, table2_subtract_count = compare_rows(table_df1, table_df2)
+            result_rows.append((table1, table2, filter, table1_count, table2_count, diff, diff_per, count_match_status, table1_subtract_count, 
+                        table2_subtract_count,  partition_status_table1, partition_status_table2, partition_columns_table1, partition_columns_table2, materialization))
 
-                if metric_validation_active:
-                    compare_metrics(table1, table2, filter, dimenssion_cols, dim_metrics_cols, ignored_cols, spark)
+            if metric_validation_active:
+                if metric_result_table == '':
+                    metric_result_table = '{catalog}.{schema}.{table_name}_metric_validation'.format(catalog='sandbox_marketing',schema='mart_mops_test',table_name=table2.split('.')[2])
+                compare_metrics_by_dimension(table1, table2, filter, dimenssion_cols, dim_metrics_cols, ignored_cols, metric_result_table, spark)
 
-            else:
-                print(f"- The Row Data Validation process skipped, as the Columns of the tables {table1} and {table2} are not identical. Please verify the columns of the tables.")
-                print(f"{table1} no of column {len(table1_sort_columns)} and table columns list:: {table1_sort_columns}")
-                print(f"{table2} no of column {len(table2_sort_columns)} and table columns list:: {table2_sort_columns}")
-
-                print(f"- Row Data validation related columns will be set to NULL in the final result set for these tables.\n")
-                table1_subtract_count = None 
-                table2_subtract_count = None
-                table1_datamatch_status = None 
-                table2_datamatch_status = None
-                result_rows.append((table1, table2, filter, table1_count, table2_count, diff, diff_per, count_match_status, table1_subtract_count, 
-                                    table2_subtract_count, table1_datamatch_status, table2_datamatch_status, partition_status_table1, 
-                                    partition_status_table2, partition_columns_table1, partition_columns_table2, materialization))
-            table_df1.unpersist()
-            table_df2.unpersist()
         else:
-            print(f"- Validation process skipped for the {table1} and {table2} due to 'False' or invalid value provided for 'is_validation_active' parameter.\n")
+            print(f"- The Row Data Validation process skipped, as the Columns of the tables {table1} and {table2} are not identical. Please verify the columns of the tables.")
+            print(f"{table1} no of column {len(table1_sort_columns)} and table columns list:: {table1_sort_columns}")
+            print(f"{table2} no of column {len(table2_sort_columns)} and table columns list:: {table2_sort_columns}")
+
+            print(f"- Row Data validation related columns will be set to NULL in the final result set for these tables.\n")
+            table1_subtract_count = None 
+            table2_subtract_count = None
+            result_rows.append((table1, table2, filter, table1_count, table2_count, diff, diff_per, count_match_status, table1_subtract_count, 
+                                table2_subtract_count, partition_status_table1, partition_status_table2, partition_columns_table1, partition_columns_table2, materialization))
+        table_df1.unpersist()
+        table_df2.unpersist()
 
     except Exception as e:
         print(f"Error encountered for the {table1} and {table2} When executing validation process:\n{str(e)}")
