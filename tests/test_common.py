@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import Mock
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import lit
-from data_validation_framework.common import get_coalesce, get_query, get_partition_details
+from data_validation_framework.common import get_query, get_partition_details
 
 class TestFunctions(unittest.TestCase):
     @classmethod
@@ -11,50 +10,27 @@ class TestFunctions(unittest.TestCase):
         cls.spark = SparkSession.builder \
             .appName("data validation framework") \
             .getOrCreate()
-
-    def test_get_coalesce(self):
-        # Mock DataFrame
-        df_mock = Mock()
-        df_mock.col_val = "value"
-        df_mock.cast.return_value = df_mock
-
-        # Test get_coalesce function
-        result = get_coalesce(df_mock, "col_val")
-        self.assertEqual(result, lit("_NULL"))
+        cls.spark.sql("""CREATE TABLE IF NOT EXISTS table1 (
+                        col1 INT)
+                        PARTITIONED BY (partition_date STRING)""")
+        cls.spark.sql("CREATE OR REPLACE TEMP VIEW table2 AS SELECT * FROM VALUES (1, 'A') AS t(col1, col2)")
 
     def test_get_query(self):
         # Test get_query function with different scenarios
-        self.assertEqual(get_query("table1", ""), "SELECT * FROM table1")
-        self.assertEqual(get_query("table2", "col1 = 'value'"), "SELECT * FROM table2 WHERE col1 = 'value'")
-        self.assertEqual(get_query("table3", None), "SELECT * FROM table3")
+        self.assertEqual(get_query("table1", ""), "SELECT /*+ REPARTITION(200) */ * FROM table1")
+        self.assertEqual(get_query("table2", "col1 = 'value'"), "SELECT /*+ REPARTITION(200) */ * FROM table2 WHERE col1 = 'value'")
+        self.assertEqual(get_query("table3", None), "SELECT /*+ REPARTITION(200) */ * FROM table3")
 
     def test_get_partition_details(self):
-        # Mock SparkSession and DataFrame
-        spark_mock = Mock(spec=self.spark)
-        df_mock = spark_mock.sql.return_value
-        df_mock.collect.return_value = [
-            Mock(col_name="# Partition Information"),
-            Mock(col_name="partition_col1"),
-            Mock(col_name="partition_col2"),
-            Mock(col_name="other_col")
-        ]
-
         # Test get_partition_details function
-        result_status, result_cols = get_partition_details(spark_mock, "mock_table")
+        result_status, result_cols = get_partition_details(self.spark, "table1")
         self.assertEqual(result_status, "Partitioned")
-        self.assertEqual(result_cols, ["partition_col1", "partition_col2"])
+        self.assertEqual(result_cols, ["partition_date"])
 
     def test_get_partition_details_non_partitioned(self):
-        # Mock SparkSession and DataFrame for non-partitioned table
-        spark_mock = Mock(spec=self.spark)
-        df_mock = spark_mock.sql.return_value
-        df_mock.collect.return_value = [
-            Mock(col_name="other_col")
-        ]
-
         # Test get_partition_details function
-        result_status, result_cols = get_partition_details(spark_mock, "mock_table")
-        self.assertEqual(result_status, "Non-Partitioned")
+        result_status, result_cols = get_partition_details(self.spark, "table2")
+        self.assertEqual(result_status, "Non-partitioned")
         self.assertEqual(result_cols, [])
 
 if __name__ == '__main__':

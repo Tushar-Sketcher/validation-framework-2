@@ -16,26 +16,25 @@ def get_coalesce(df, col_val):
     return coalesce(df[col_val].cast("string"), lit(NULL_MAPPER))
 
 
-def get_query(table, filter):
+def get_query(table: str, query_filter: str):
     """
-    Generate SQL queries based on provided table names and optional filter condition.
-    Params:
-    - table (str): The name of the table.
-    - filter (str): Optional filter condition to apply to both tables. If filter is empty, 'null', or None, no filtering is applied.
+    Generate SQL queries based on provided table names and optional filter condition. Params: - table (str): The name
+    of the table. - filter (str): Optional filter condition to apply to both tables. If filter is empty, 'null',
+    or None, no filtering is applied.
     
     Returns:
     - query1 (str): The generated SQL query for table.
     """
-    if filter == '' or filter == 'null' or filter is None:
+    if query_filter == '' or query_filter == 'null' or query_filter is None:
         query = f"SELECT /*+ REPARTITION(200) */ * FROM {table}"
-    elif filter and isinstance(filter, str):
-        query = f"SELECT /*+ REPARTITION(200) */ * FROM {table} WHERE {filter}"
+    elif query_filter and isinstance(query_filter, str):
+        query = f"SELECT /*+ REPARTITION(200) */ * FROM {table} WHERE {query_filter}"
     return query
 
 
 def get_partition_details(spark, table):
     """
-    This fuctions collects partition columns and partition status information for the specified tables.
+    This function collects partition columns and partition status information for the specified tables.
     Params:
     - spark (SparkSession): The SparkSession object.
     - table (str): The name of the first table.
@@ -59,10 +58,9 @@ def get_partition_details(spark, table):
             partition_info = True
             partition_status = 'Partitioned'
         elif partition_info:
-            partition_info = False
             break
 
-    if len(partition_cols) != 0 :
+    if len(partition_cols) != 0:
         partition_cols = sorted(partition_cols)
 
     return partition_status, partition_cols
@@ -77,23 +75,23 @@ def get_dataframe(spark, rows):
     - df (dataframe): dataframe containing validation details.
     """
     schema = StructType([
-                StructField("table1", StringType(), True),
-                StructField("table2", StringType(), True),
-                StructField("filters", StringType(), True),
-                StructField("table1_count", IntegerType(), True),
-                StructField("table2_count", IntegerType(), True),
-                StructField("count_difference", IntegerType(), True),
-                StructField("count_difference_percentage", FloatType(), True),
-                StructField("count_match_status", BooleanType(), True),
-                StructField("table1_subtract_count", IntegerType(), True),
-                StructField("table2_subtract_count", IntegerType(), True),
-                StructField("partition_status_table1", StringType(), True),
-                StructField("partition_status_table2", StringType(), True),
-                StructField("table1_partition_columns", ArrayType(StringType()), True),
-                StructField("table2_partition_columns", ArrayType(StringType()), True),
-                StructField("materialization", StringType(), True),
+        StructField("table1", StringType(), True),
+        StructField("table2", StringType(), True),
+        StructField("filters", StringType(), True),
+        StructField("table1_count", IntegerType(), True),
+        StructField("table2_count", IntegerType(), True),
+        StructField("count_difference", IntegerType(), True),
+        StructField("count_difference_percentage", FloatType(), True),
+        StructField("count_match_status", BooleanType(), True),
+        StructField("table1_subtract_count", IntegerType(), True),
+        StructField("table2_subtract_count", IntegerType(), True),
+        StructField("partition_status_table1", StringType(), True),
+        StructField("partition_status_table2", StringType(), True),
+        StructField("table1_partition_columns", ArrayType(StringType()), True),
+        StructField("table2_partition_columns", ArrayType(StringType()), True),
+        StructField("materialization", StringType(), True),
 
-            ])
+    ])
 
     df = spark.createDataFrame(rows, schema)
     return df

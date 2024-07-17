@@ -30,7 +30,7 @@ def generate_table_comparison_details_wheel_task():
     parser.add_argument('--table2', type=str, help='file path of yaml containing validation input parameters ', required=True)
     parser.add_argument('--filter_condition', type=str, help='file path of yaml containing validation input parameters ', required=True)
     parser.add_argument('--metric_validation_active', type=str, help='file path of yaml containing validation input parameters ', required=True)
-    parser.add_argument('--dimenssion_columns', type=str, help='file path of yaml containing validation input parameters ', required=True)
+    parser.add_argument('--dimension_columns', type=str, help='file path of yaml containing validation input parameters ', required=True)
     parser.add_argument('--dim_metrics_columns', type=str, help='file path of yaml containing validation input parameters ', required=True)
     parser.add_argument('--ignored_columns', type=str, help='file path of yaml containing validation input parameters ', required=True)
     parser.add_argument('--is_validation_active', type=str, help='file path of yaml containing validation input parameters ', required=True)
@@ -42,12 +42,12 @@ def generate_table_comparison_details_wheel_task():
     table2 = args.table2
     filter_condition = args.filter_condtition
     metric_validation_active = args.metric_validation_active
-    dimenssion_columns = args.dimenssion_columns
+    dimension_columns = args.dimension_columns
     dim_metrics_columns = args.dim_metrics_columns
     ignored_columns = args.ignored_columns
     is_validation_active = args.is_validation_active
     materialization = args.materialization
 
-    validation_df = generate_table_comparison_details(table1, table2, filter_condition, metric_validation_active, dimenssion_columns, dim_metrics_columns, ignored_columns, is_validation_active, materialization)
+    validation_df = generate_table_comparison_details(table1, table2, filter_condition, metric_validation_active, dimension_columns, dim_metrics_columns, ignored_columns, is_validation_active, materialization)
     validation_df.show(truncate=0)
     return validation_df

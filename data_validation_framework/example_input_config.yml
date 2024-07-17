@@ -1,7 +1,7 @@
 # This is example input yaml for count_data_validations() and row_data_validations() functions.
 # This file is not being used in the code anywhere, but we have added to provide the example here. 
 # User needs to provide this yaml as input in the count_data_validations() and row_data_validations() function.
-# Replace the tables names with your's to proceed for the count validation using count_data_validations()
+# Replace the tables names with yours to proceed for the count validation using count_data_validations()
 # and row data validation using row_data_validations()
 rows:
   - is_validation_active: True
@@ -47,5 +47,5 @@ rows:
     materialization: 'incremental'
     metric_validation_active: True
     ignored_columns: 'mls_id, team_lead'
-    dimenssion_columns: 'p_data_date'
+    dimension_columns: 'p_data_date'
     dim_metrics_columns: 'team_lead, mls_id'

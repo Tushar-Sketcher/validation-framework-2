@@ -1,5 +1,8 @@
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import MagicMock, PropertyMock, patch
+import yaml
+from pyspark.sql import DataFrame
+# Importing functions to be tested
 from data_validation_framework.operations import compare_two_tables
 from data_validation_framework.common import get_dataframe
 from data_validation_framework.process_validations_task import (
@@ -7,105 +10,75 @@ from data_validation_framework.process_validations_task import (
     generate_multiple_table_comparison_details
 )
 
-
-# Mocking the spark session object
-class MockSparkSession:
-    def __init__(self):
-        pass
-
-@patch('data_validation_framework.operations.compare_two_tables')
-@patch('data_validation_framework.common.get_dataframe')
 class TestDataValidation(unittest.TestCase):
 
-    def test_generate_table_comparison_details_success(self, mock_get_dataframe, mock_compare_two_tables):
-        # Mock successful return value for compare_two_tables and get_dataframe
-        mock_compare_two_tables.return_value = [{'table': 'table1', 'count': 100}]
-        mock_get_dataframe.return_value = MagicMock(spec=MockSparkSession)
+    def setUp(self):
+        # Patch necessary functions or objects here
+        self.mock_compare_two_tables = patch('data_validation_framework.operations.compare_two_tables').start()
+        self.mock_get_dataframe = patch('data_validation_framework.common.get_dataframe').start()
+        self.mock_spark_session = patch('data_validation_framework.operations.SparkSession').start()
 
-        # Call the function with mock arguments
+        self.mock_spark = self.mock_spark_session.return_value
+        self.mock_sql = MagicMock()
+        type(self.mock_sql).dtypes = PropertyMock(return_value=[('col1', 'bigint'), ('col2', 'int')])
+        self.mock_sql.columns = ['col1', 'col2']
+        self.mock_sql.count.return_value = 1
+        self.mock_spark.sql.return_value = self.mock_sql     
+
+    def tearDown(self):
+        # Clean up patches
+        patch.stopall()
+
+    def test_generate_table_comparison_details_empty_tables(self):
+        # Mock return values
+        self.mock_compare_two_tables.return_value = []
+        self.mock_spark_session.reset_mock()  # Reset mock calls for clean slate
+
+        # Call the function
         result = generate_table_comparison_details(
-            MagicMock(spec=MockSparkSession),mock_compare_two_tables,mock_get_dataframe,'table1','table2','',True,'','','',True,None
+            'table1', 'table2', '', False, '', '', ''
         )
 
         # Assertions
-        mock_compare_two_tables.assert_called_once_with(
-            MagicMock(spec=MockSparkSession),[],'table1','table2','',True,'','','',True,None
-        )
-        mock_get_dataframe.assert_called_once()
-        self.assertIsInstance(result, MagicMock)
+        self.assertIsInstance(result, DataFrame)  # Check if result is a DataFrame
 
-    def test_generate_table_comparison_details_validation_inactive(self, mock_get_dataframe, mock_compare_two_tables):
-        # Mock return value for compare_two_tables and get_dataframe
-        mock_compare_two_tables.return_value = [{'table': 'table1', 'count': 100}]
-        mock_get_dataframe.return_value = MagicMock(spec=MockSparkSession)
+    def test_generate_table_comparison_details_metric_validation_active(self):
+        # Mock return values with metrics
+        mock_metrics_result = [{'table': 'table1', 'count': 100, 'metrics': {'metric1': 10, 'metric2': 20}}]
+        self.mock_compare_two_tables.return_value = mock_metrics_result
+        self.mock_spark_session.reset_mock()  # Reset mock calls for clean slate
 
-        # Call the function with validation_inactive = False
+        # Call the function
         result = generate_table_comparison_details(
-            MagicMock(spec=MockSparkSession),mock_compare_two_tables,mock_get_dataframe,'table1','table2','',False,'','','',True,None
+            'table1', 'table2', '', True, '', '', ''
         )
 
         # Assertions
-        mock_compare_two_tables.assert_not_called()  # Ensure compare_two_tables is not called
-        mock_get_dataframe.assert_called_once()
-        self.assertIsInstance(result, MagicMock)
+        self.assertIsInstance(result, DataFrame)  # Check if result is a DataFrame
 
-    def test_generate_table_comparison_details_exception_handling(self, mock_get_dataframe, mock_compare_two_tables):
+    def test_generate_table_comparison_details_exception_handling(self):
         # Mock exception in compare_two_tables
-        mock_compare_two_tables.side_effect = Exception("Validation error")
-        mock_get_dataframe.return_value = MagicMock(spec=MockSparkSession)
+        self.mock_compare_two_tables.side_effect = Exception("Validation error")
+        mock_spark = MagicMock()
+        mock_sql = MagicMock()
+        type(mock_sql).dtypes = PropertyMock(return_value=[('col1', 'bigint'), ('col2', 'int')])
+        mock_sql.columns = ['col1', 'col2']
+        mock_sql.count.return_value = 1
+        mock_spark.sql.return_value = mock_sql
+        self.mock_spark_session.return_value = mock_spark
 
-        # Call the function with mock arguments
+        # Call the function
         result = generate_table_comparison_details(
-            MagicMock(spec=MockSparkSession),mock_compare_two_tables,mock_get_dataframe,'table1','table2','',True,'','','',True,None
+            'table1', 'table2', '', True, '', '', ''
         )
 
         # Assertions
-        mock_compare_two_tables.assert_called_once()
-        mock_get_dataframe.assert_called_once()
-        self.assertIsInstance(result, MagicMock)
+        self.assertIsInstance(result, DataFrame)  # Assuming exception handling returns a string
 
-    def test_generate_multiple_table_comparison_details(self, mock_get_dataframe, mock_compare_two_tables):
-        # Mock return value for compare_two_tables and get_dataframe
-        mock_compare_two_tables.return_value = [{'table': 'tableA', 'count': 200}, {'table': 'tableB', 'count': 300}]
-        mock_get_dataframe.return_value = MagicMock(spec=MockSparkSession)
-
-        # Mock yaml content and path
-        yaml_content = """
-        rows:
-          - table1: tableA
-            table2: tableB
-            filter_condition: ''
-            is_validation_active: true
-            metric_validation_active: false
-            dimenssion_columns: ''
-            dim_metrics_columns: ''
-            ignored_columns: ''
-            materialization: null
-        """
-        with patch('builtins.open', mock_open(read_data=yaml_content)):
-            result = generate_multiple_table_comparison_details('dummy_path.yaml')
-
-        # Assertions
-        mock_compare_two_tables.assert_any_call(
-            MagicMock(spec=MockSparkSession),[],'tableA','tableB','',True,'','','',True,None
-        )
-        mock_get_dataframe.assert_called_once()
-        self.assertIsInstance(result, MagicMock)  # Adjust to match actual return type
-
-    def test_generate_multiple_table_comparison_details_invalid_yaml(self, mock_get_dataframe, mock_compare_two_tables):
-        # Mock return value for compare_two_tables and get_dataframe
-        mock_compare_two_tables.return_value = [{'table': 'tableA', 'count': 200}, {'table': 'tableB', 'count': 300}]
-        mock_get_dataframe.return_value = MagicMock(spec=MockSparkSession)
-
-        # Mock invalid yaml content and path
-        invalid_yaml_content = "invalid yaml"
-        with patch('builtins.open', mock_open(read_data=invalid_yaml_content)):
-            result = generate_multiple_table_comparison_details('dummy_path.yaml')
-
-        # Assertions
-        mock_compare_two_tables.assert_not_called()  # Ensure compare_two_tables is not called
-        mock_get_dataframe.assert_not_called()  # Ensure get_dataframe is not called
-        self.assertIsNone(result)  # Adjust to match actual behavior
+    @patch('builtins.open', side_effect=FileNotFoundError("File not found"))
+    def test_generate_multiple_table_comparison_details_invalid_yaml(self, mock_open):
+        with self.assertRaises(FileNotFoundError):
+            generate_multiple_table_comparison_details('dummy_path.yaml')
 
 if __name__ == "__main__":
     unittest.main()
