@@ -1,0 +1,76 @@
+include:
+  - project: zg-container-platform/gitlab-templates/docker-templates
+    file: build.yml
+  - local: poetry.yml
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "template"
+      exists:
+        - .cookiecutter.json
+      when: never
+    - if: $CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_EVENT_TYPE != "merge_train"
+      when: never
+    - when: always
+
+default:
+  image: python:3.9
+  tags:
+    - build
+
+variables:
+  # Poetry doesn't follow symlinks, especially for sdist. (https://github.com/python-poetry/poetry/issues/1998)
+  # The default behavior is to skip the symlinks when creating the tarball.
+  # Set "POETRY_REPLACE_SYMLINKS" to "true" to replace all symlinks with the actual files prior to poetry build.
+  POETRY_REPLACE_SYMLINKS: "false"
+  POETRY_VERSION_SPECIFIER: ">=1.0.0"
+  DOCKER_BUILD_ENABLED: "false"
+  AUTO_VERSION: "false"
+  AUTO_MAJOR_VERSION: 0
+  AUTO_MINOR_VERSION: 0
+  BUILD_COVERAGE_ENABLED: "false"
+  JAVA_HOME: "/usr/local/jdk-11.0.1"
+
+stages:
+  - build
+  - unittest
+  - publish
+
+unittest:python:
+  stage: unittest
+  image: python:3.9
+  tags:
+    - build
+  variables:
+    POETRY_VERSION_SPECIFIER: ">=1.0.0"
+  before_script:
+    - apt-get update
+    - apt-get -y install curl
+    - curl -O https://download.java.net/java/GA/jdk11/13/GPL/openjdk-11.0.1_linux-x64_bin.tar.gz
+    - tar zxvf openjdk-11.0.1_linux-x64_bin.tar.gz
+    - mv jdk-11.0.1 /usr/local/
+    - export JAVA_HOME=/usr/local/jdk-11.0.1
+    - export PATH=$PATH:$JAVA_HOME/bin
+  script:
+    - pip3 install poetry
+    - poetry install
+    - poetry run python3 -m unittest discover -s tests -v 
+
+build:poetry:
+  stage: build
+  extends: .build-poetry
+  # rules:
+  #   - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+
+build:coverage:
+  stage: build
+  extends: .build-coverage
+  rules:
+    - if: $BUILD_COVERAGE_ENABLED == "true"
+
+publish:poetry:
+  stage: publish
+  extends: .publish-poetry
+  when: manual
+  # rules:
+  #   - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
